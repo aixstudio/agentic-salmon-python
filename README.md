@@ -1,6 +1,11 @@
 # Agentic Salmon — Python
 
-**Owner:** Joseph Shi — [aixstudio](https://github.com/aixstudio) — Principal Architect - Agentic AI & Data Platform | I build with Python
+- **Owner:** Joseph Shi — [aixstudio](https://github.com/aixstudio)
+- **Role:** Principal Architect — Agentic AI & Data Platform
+- **Created:** 2026-08-06 · **Updated:** 2026-10-18
+
+I validate architecture through runnable code, explicit contracts, and behavioral
+proofs. This implementation uses Python and its agent-workflow ecosystem.
 
 > The agent refused to hallucinate dinner. That is when the architecture started working.
 
@@ -88,11 +93,21 @@ flowchart TB
     style LANGGRAPH_ROW fill:transparent,stroke:transparent
 ```
 
-Guard is orthogonal to the agent sequence: it constrains transitions and release
-authority but does not perform a seventh cognitive task. LangGraph is likewise
-not an agent; it schedules and checkpoints the contracts. Reason reaches
-reviewed knowledge through MCP, so retrieval infrastructure can change without
-rewriting Reason or the six-agent control model.
+Guard governs transitions and release authority across the agent sequence.
+LangGraph schedules and checkpoints the contracts. Reason reaches reviewed
+knowledge through MCP, so retrieval infrastructure can change without rewriting
+Reason or the six-agent control model.
+
+### What “orthogonal” means here
+
+Orthogonal means a separate concern that applies across other components.
+The six agents perform the work: Perceive → Connect → Reason → Review → Act →
+Learn. Guard governs which transitions and actions may proceed throughout that
+sequence. It is not a seventh stage.
+
+The responsibilities are separate and interact through constraints: **agents
+perform work; Guard constrains what may proceed**. The runtime schedules and
+checkpoints that work. Python uses LangGraph; Go uses its native state machine.
 
 ## Technology Stack and Rationale
 
@@ -100,12 +115,26 @@ rewriting Reason or the six-agent control model.
 | --- | --- | --- |
 | Python 3.13 | Typed local runtime and distributable package | Keeps the implementation readable, portable, and easy to inspect in VS Code while holding the demo to one validated runtime. |
 | LangGraph `StateGraph` | State transitions, SQLite checkpoints, Review and pre-action interrupts, and durable same-run resume | Makes orchestration explicit and separates node scheduling from agent judgment. |
+| Official LangGraph async SQLite checkpointer and proof phase claims | Durable Review and pre-action pickup across CLI invocations | Keeps the three proofs on one run ID and rejects wrong-order or repeated execution without a hosted approval service. |
 | MCP Python SDK over stdio | Real client/server `search_knowledge` tool boundary | Proves that knowledge and future business tools are pluggable through a protocol boundary rather than embedded inside an agent. |
 | FastEmbed with `BAAI/bge-small-en-v1.5` | Local dense embeddings for semantic retrieval | Demonstrates semantic RAG without an API key, hosted model, or keyword-only shortcut. |
 | In-memory cosine ranking | Ranks the reviewed embedded chunks | Preserves the retrieval contract while avoiding a vector database that would add setup but no new architectural proof. |
-| Reviewed JSON corpus with SHA-256 integrity | Self-contained knowledge sources, chunks, citations, and provenance | Makes retrieval evidence inspectable and tamper-detectable; it can later be replaced by governed enterprise content. |
+| Reviewed JSON corpus and SHA-256 content digests | Self-contained knowledge sources, chunks, citations, and provenance | Identifies the exact cited text used by a run; content review and source authenticity remain separate responsibilities. |
 | Typed Python models and a governed ontology | Stage artifacts, entity kinds, relationships, decisions, and authority | Turns the six agent names into testable contracts and rejects invalid semantic or control transitions. |
-| JSON and Markdown traces plus `unittest` | Audit output and deterministic contract tests | Gives an evaluator observable evidence without publishing prompts or hidden reasoning. |
+| JSON run logs, SQLite checkpoints, and `unittest` | Durable pickup, audit evidence, and deterministic contract tests | Gives an evaluator observable evidence without publishing prompts or hidden reasoning. |
+
+## Why Python and Go
+
+Python keeps LangGraph orchestration and FastEmbed dense semantic retrieval
+close to their supported libraries. Go makes the same authority contracts
+inspectable in a compiled runtime, with a native state machine, the official
+Go MCP SDK, and self-contained lexical retrieval.
+
+Both implementations preserve the six agent responsibilities, ontology, real
+RAG/MCP boundary, SQLite-backed proof pickup, explicit human adjudication,
+cited action, and policy-safe learning. Retrieval methods and packaging differ;
+this is a shared contract demonstration, not a retrieval-quality or performance
+comparison. The Go executable has no Python or LangGraph dependency.
 
 ## Why This Matters
 
@@ -161,7 +190,7 @@ the components behind those boundaries:
 | One local MCP knowledge server | Multiple authenticated MCP servers and domain toolsets with scoped permissions |
 | One node per agent contract | Multiple tools, models, workers, or subgraphs behind the same owned agent responsibility |
 | CLI Review interrupt | Approval queues, case-management UI, policy service, and role-based authority |
-| Local JSON and Markdown traces | Durable event storage, observability, compliance evidence, and continuous evaluations |
+| Local JSON run logs and SQLite checkpoints | Durable event storage, observability, compliance evidence, and continuous evaluations |
 
 The stable architectural idea is the governed contract between evidence,
 judgment, authority, and action. The infrastructure underneath each contract
@@ -196,6 +225,16 @@ Python 3.13 is already installed, `python3.13 -m venv --clear .venv` is
 sufficient. Creating `.venv` is setup, not a demo step.
 
 ## Run the Three Incremental HITL Proofs
+
+Install the local package from the repository root after creating the Python
+3.13 environment:
+
+```bash
+.venv/bin/python -m pip install -e .
+```
+
+The first Proof-1 may download the configured embedding model. Retrieval and
+model details go to the run log; terminal output remains focused on the proof.
 
 Use the same run ID in all three commands. These proofs continue **one durable
 run**, including after closing and reopening the terminal. For a repeat test,
