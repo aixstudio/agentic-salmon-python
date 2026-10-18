@@ -37,7 +37,7 @@ checkpoints that work. Python uses LangGraph; Go uses its native state machine.
 I validate architecture through runnable code, explicit contracts, and behavioral
 proofs. This implementation uses Python and its agent-workflow ecosystem.
 
-> The agent refused to hallucinate dinner. That is when the architecture started working.
+> The agent refused to guess during meal prep. That is when the architecture started working.
 
 Python implementation; [native Go sibling](https://github.com/aixstudio/agentic-salmon-go).
 
@@ -57,7 +57,7 @@ interrupt.
 
 <img src="docs/assets/salmon-pre-cook-input.jpeg" alt="Two seasoned food portions in an air-fryer basket before cooking" width="240">
 
-*Reviewed pre-cook input; food identity and safety remain unverified.*
+*Reviewed meal-prep input; food identity and safety remain unverified.*
 
 ## Logic Flow — One Run, Three Proofs
 
