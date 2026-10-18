@@ -65,6 +65,8 @@ class AgenticSalmonWorkflow:
         act: ActAgent | None = None,
         learn: LearnAgent | None = None,
         guard: GuardPolicy | None = None,
+        checkpointer: Any = None,
+        defer_action: bool = False,
     ) -> None:
         self.perceive_agent = perceive
         self.connect_agent = connect or ConnectAgent(SALMON_ONTOLOGY)
@@ -73,6 +75,8 @@ class AgenticSalmonWorkflow:
         self.act_agent = act or ActAgent()
         self.learn_agent = learn or LearnAgent()
         self.guard = guard or GuardPolicy()
+        self.checkpointer = checkpointer
+        self.defer_action = defer_action
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -83,6 +87,9 @@ class AgenticSalmonWorkflow:
         builder.add_node(Stage.REVIEW.value, self._review_node)
         builder.add_node(Stage.ACT.value, self._act_node)
         builder.add_node(Stage.LEARN.value, self._learn_node)
+        if self.defer_action:
+            builder.add_node("release", self._release_node)
+            builder.add_edge("release", Stage.ACT.value)
         builder.add_edge(START, Stage.PERCEIVE.value)
         builder.add_edge(Stage.PERCEIVE.value, Stage.CONNECT.value)
         builder.add_edge(Stage.CONNECT.value, Stage.REASON.value)
@@ -91,7 +98,7 @@ class AgenticSalmonWorkflow:
             Stage.REVIEW.value,
             self._route_review,
             {
-                Stage.ACT.value: Stage.ACT.value,
+                Stage.ACT.value: "release" if self.defer_action else Stage.ACT.value,
                 Stage.REVIEW.value: Stage.REVIEW.value,
                 "end": END,
             },
@@ -129,7 +136,21 @@ class AgenticSalmonWorkflow:
                 ("agentic_salmon.models", name) for name in trusted_models
             ]
         )
-        return builder.compile(checkpointer=InMemorySaver(serde=serde))
+        saver = self.checkpointer or InMemorySaver(serde=serde)
+        saver.serde = serde
+        return builder.compile(checkpointer=saver)
+
+    def _release_node(self, state: WorkflowState) -> dict:
+        self.guard.require_transition(Stage.ACT, review=state["review_result"])
+        response = interrupt({"phase": "action_ready", "question": "Adjudication saved. Run Proof-3 to release the bounded action."})
+        if response != {"execute": True}:
+            raise PermissionError("Action release requires Proof-3 execution")
+        return {}
+
+    async def aexecute(self, run_id: str) -> RunResult:
+        config = {"configurable": {"thread_id": run_id}}
+        result = await self.graph.ainvoke(Command(resume={"execute": True}), config=config)
+        return _run_result(run_id, result, _interrupt_payload(result))
 
     async def arun(
         self,
@@ -264,6 +285,7 @@ class AgenticSalmonWorkflow:
         prior_review = state.get("review_result")
         response = interrupt(
             {
+                "phase": "human_review",
                 "question": "Select a working hypothesis and authorize only bounded guidance.",
                 "validation_messages": (
                     list(prior_review.reasons)
@@ -390,7 +412,9 @@ def _run_result(
     review = state.get("review_result")
     action = state.get("action_result")
     decision = review.decision if review is not None else GateDecision.ASK
-    if interrupt_payload is not None:
+    if interrupt_payload is not None and interrupt_payload.get("phase") == "action_ready":
+        status = "adjudicated"
+    elif interrupt_payload is not None:
         status = "interrupted"
     elif decision is GateDecision.STOP:
         status = "stopped"

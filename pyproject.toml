@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-salmon"
-version = "0.2.1"
+version = "0.3.0"
 description = "A controlled agentic loop that makes uncertainty and human authority explicit."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -13,6 +13,7 @@ authors = [{ name = "aixstudio" }]
 dependencies = [
     "fastembed>=0.8,<1",
     "langgraph>=1.2,<2",
+    "langgraph-checkpoint-sqlite>=3.1.2,<4",
     "mcp>=2,<3",
 ]
 

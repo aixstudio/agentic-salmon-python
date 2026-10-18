@@ -29,3 +29,9 @@ The public baseline uses reviewed observations cryptographically bound to the sa
 - Retrieval is visibly replaceable through a typed port without changing Reason or the LangGraph topology.
 - The first real run downloads the configured embedding model; deterministic unit tests remain network-free.
 - Adding a real vision provider later requires evaluation and threat-model updates, not a workflow rewrite.
+
+## Durable incremental proofs
+
+Proof-1 saves the LangGraph human-review interrupt in the official async SQLite checkpointer. Proof-2 reloads the same run, accepts the prescribed APPROVE or STOP decision, records Review and pauses at a separate pre-action interrupt. Proof-3 consumes the persisted adjudication and executes Act/Learn. No optional evidence text is requested; all unknowns are retained. Outcome/preference input is fixed historical case evidence. SQLite phase claims prevent wrong-order, concurrent and repeated execution. Active operations interrupted by a crash are blocked from automatic replay.
+
+Terminal output contains review guidance, watch-outs, the next command and the log path. Complete evidence is appended to ignored log/<run-id>.log; SQLite checkpoints live beside it. These are local trusted artifacts, not an authenticated production approval service.

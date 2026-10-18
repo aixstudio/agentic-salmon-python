@@ -1,8 +1,10 @@
-# Agentic Salmon
+# Agentic Salmon — Python
 
 **Owner:** Joseph Shi — [aixstudio](https://github.com/aixstudio) — Principal Architect - Agentic AI & Data Platform | I build with Python
 
 > The agent refused to hallucinate dinner. That is when the architecture started working.
+
+Python implementation; [native Go sibling](https://github.com/aixstudio/agentic-salmon-go).
 
 Agentic Salmon is a locally runnable proof of controlled agentic architecture,
 not a cooking application or a chat-wrapper demo. It turns one deliberately
@@ -97,7 +99,7 @@ rewriting Reason or the six-agent control model.
 | Technology | Role in this demo | Why it was chosen |
 | --- | --- | --- |
 | Python 3.13 | Typed local runtime and distributable package | Keeps the implementation readable, portable, and easy to inspect in VS Code while holding the demo to one validated runtime. |
-| LangGraph `StateGraph` | State transitions, checkpoints, Review interrupt, and same-run resume | Makes orchestration explicit and separates node scheduling from agent judgment. |
+| LangGraph `StateGraph` | State transitions, SQLite checkpoints, Review and pre-action interrupts, and durable same-run resume | Makes orchestration explicit and separates node scheduling from agent judgment. |
 | MCP Python SDK over stdio | Real client/server `search_knowledge` tool boundary | Proves that knowledge and future business tools are pluggable through a protocol boundary rather than embedded inside an agent. |
 | FastEmbed with `BAAI/bge-small-en-v1.5` | Local dense embeddings for semantic retrieval | Demonstrates semantic RAG without an API key, hosted model, or keyword-only shortcut. |
 | In-memory cosine ranking | Ranks the reviewed embedded chunks | Preserves the retrieval contract while avoiding a vector database that would add setup but no new architectural proof. |
@@ -193,105 +195,98 @@ $(brew --prefix python@3.13)/bin/python3.13 -m venv --clear .venv
 Python 3.13 is already installed, `python3.13 -m venv --clear .venv` is
 sufficient. Creating `.venv` is setup, not a demo step.
 
-## Run the Three-Step Demo
+## Run the Three Incremental HITL Proofs
 
-Run all commands from the repository root.
+Use the same run ID in all three commands. These proofs continue **one durable
+run**, including after closing and reopening the terminal. For a repeat test,
+use a new run ID in all three commands; existing runs are never overwritten.
 
-The three runs are a progressive assurance sequence, not three duplicate ways
-to launch the program:
+### Proof-1 — Intentional pause for HITL
 
-| Run | Control question | What it proves |
-| --- | --- | --- |
-| 1. Governed interrupt | What happens before a human grants authority? | Retrieval and reasoning do not imply permission to act; the default path stops at Review. |
-| 2. Interactive HITL | Can a human provide the missing judgment and authority without erasing uncertainty? | The graph validates the selection, retained unknowns, and bounded authorization before Act and Learn can run. |
-| 3. Non-interactive authorized run | Can the same governed contract be invoked repeatably by automation? | Human evidence can be supplied explicitly through a machine-runnable interface while preserving the same Guard, citations, stages, and policy outcome. |
+**Proof ID:** Proof-1
 
-### Step 1 — Install and Reach the Governed Interrupt
+**Test Conditions:** Run from the repository root with a fresh `salmon-demo-001`
+run ID. The reviewed image, fixture, and corpus are available. No approval has
+been supplied. This step performs real retrieval across the MCP boundary.
 
-```bash
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m agentic_salmon demo
-```
-
-The editable install makes the local package runnable. On the first demo run,
-the configured `BAAI/bge-small-en-v1.5` embedding model may be downloaded. The
-workflow then calls the local MCP server, performs semantic retrieval, and
-stops at the Review interrupt.
-
-**What this proves:** the system is deny-by-default. Perceive, Connect, Reason,
-RAG, and MCP may assemble useful evidence, but none of them can silently grant
-Act permission.
-
-**Expected outcome:** `status` is `interrupted`, `decision` is `ask`, and the
-completed stages are `perceive`, `connect`, and `reason`. `guidance` remains
-`null`; neither Act nor Learn runs before a human decision. This interruption
-is the expected success condition, not an incomplete run.
-
-### Step 2 — Complete the Interactive HITL Review
-
-The interactive runner displays Reason's offered hypotheses and resumes the
-same run only after valid human input:
+**Test Cmd:**
 
 ```bash
-.venv/bin/python -m agentic_salmon demo --interactive \
-  --outcome "390°F for 14 minutes; wonderful and fresh-tasting" \
-  --feedback "moderately spicy result preferred"
+.venv/bin/python -m agentic_salmon proof-1 --run-id salmon-demo-001
 ```
 
-Answer the Review prompts as follows for the authorized demonstration:
+**What to Expect:** Perceive → Connect → Reason execute, then the system pauses
+before Review. The terminal tells you what to review: evidence supports `fish`
+as a working hypothesis, species remains unverified, all five unknowns must be
+retained, and only cited bounded guidance may be authorized. Act/Learn do not
+run. The checkpoint is saved in `log/salmon-demo-001.sqlite3`; detailed evidence,
+retrieval results, citations, MCP metadata, timings, and state are recorded in
+`log/salmon-demo-001.log`.
+
+**What to Do Next:** Review the evidence boundary and requested authority.
+Continue to Proof-2 with this same run ID. You may exit the terminal first.
+
+### Proof-2 — Human review and adjudication of the saved run
+
+**Proof ID:** Proof-2
+
+**Test Conditions:** Proof-1 is paused for `salmon-demo-001`. No stage is rerun.
+The system displays the saved review contract. The deterministic acceptance
+path uses the single prescribed answer `APPROVE`; no storage, odor, or other
+free-text observations are requested.
+
+**Test Cmd:**
+
+```bash
+.venv/bin/python -m agentic_salmon proof-2 --run-id salmon-demo-001
+```
+
+At the system prompt, type exactly:
 
 ```text
-Choose a number, hypothesis key, or 'stop': 2
-Accept the displayed retained unknowns? [y/N]: y
-Authorize only bounded cited guidance? [y/N]: y
-Storage recollection (optional): retrieved frozen from home freezer; exact cold chain unknown
-Odor observation (optional): seasoning smelled reminiscent of lasagna
+APPROVE
 ```
 
-Choice `2` is the displayed `fish` hypothesis; entering the stable key `fish`
-is equivalent. The runner also displays `Korean-spiced soup food` as unknown
-and not action eligible, and `salmon` as plausible. Entering an invalid or
-ineligible choice produces a validation message and does not advance. Entering
-`stop`, answering `n`, or pressing Enter at either authorization prompt prevents
-Act from releasing guidance. The storage and odor answers are evidence inputs,
-not proof of identity or freshness.
+**What to Expect:** Review records `ALLOW_BOUNDED`: select the evidence-supported
+`fish` hypothesis, acknowledge **all** retained unknowns, and authorize only
+bounded cited guidance. The adjudication is saved under the same run ID.
+Act/Learn still do not run. Watch out: approval is authority to release the
+bounded response; it does not verify food identity or safety. `STOP`, Enter,
+or end of input ends this run without action. Other input leaves it paused.
 
-**What this proves:** HITL is an enforceable control contract, not a decorative
-approval screen. The human must choose an eligible hypothesis, acknowledge the
-remaining uncertainty, and explicitly constrain the authority being granted.
+**What to Do Next:** For the prescribed `APPROVE` path, continue to Proof-3 with
+the same run ID. A stopped run is a test end and cannot proceed to Proof-3.
 
-**Expected outcome:** after the five answers above, `status` is `completed`,
-`decision` is `allow_bounded`, and all six stages run in order. Act keeps food
-identity unverified and cites reviewed 145°F thermometer guidance. Learn records
-the supplied outcome and preference while reporting that they have no effect on
-safety or authority policy.
+### Proof-3 — Authorized action, learning, and test end
 
-### Step 3 — Run the Non-Interactive Authorized Path
+**Proof ID:** Proof-3
 
-This form supplies the same human evidence as command-line arguments, which is
-useful for repeatable demonstrations and automation:
+**Test Conditions:** Proof-2 saved an approved adjudication for
+`salmon-demo-001`. Proof-3 consumes that decision; it cannot bypass Review.
+The learning input is the fixed historical case outcome and preference from
+the public story, explicitly labeled as historical evidence.
+
+**Test Cmd:**
 
 ```bash
-.venv/bin/python -m agentic_salmon demo \
-  --review allow-bounded \
-  --selected-hypothesis "fish" \
-  --storage-recollection "retrieved frozen from home freezer; exact cold chain unknown" \
-  --odor-observation "seasoning smelled reminiscent of lasagna" \
-  --outcome "390°F for 14 minutes; wonderful and fresh-tasting" \
-  --feedback "moderately spicy result preferred"
+.venv/bin/python -m agentic_salmon proof-3 --run-id salmon-demo-001
 ```
 
-**What this proves:** the governance model is independent of the interactive
-CLI. A script, test harness, service, or future business workflow can supply the
-same typed Review evidence and receive the same controlled stage progression.
+**What to Expect:** Act releases only the human-authorized guidance supported
+by a retrieved citation. Learn records the historical outcome and preference
+with no policy change. The run contains all six stages exactly once, reports
+`COMPLETED`, and acknowledges `TEST END — PASS`. Watch out: this executes a
+bounded guidance artifact, not a cooking action or a new food-safety trial.
+Full guidance, adjudication, citations, and learning evidence remain in the
+same `log/salmon-demo-001.log`.
 
-**Expected outcome:** no interactive prompt appears. The result is `completed`
-with `decision: allow_bounded`; the trace contains all six stages, Act cites the
-reviewed USDA temperature chunk, and Learn records the outcome and preference
-with `policy_effect: none`. The 390°F/14-minute values remain historical outcome
-evidence—not a universal recipe or proof of identity, freshness, or safety.
+**What to Do Next:** The test is finished. Inspect the run log if deeper review
+is needed. Repeating Proof-3 is rejected rather than replaying Act.
 
-An ignored Markdown report is also written under `traces/`.
+SQLite checkpoints and logs are local, ignored runtime artifacts. Keep them
+if you want to resume or inspect a run. An operation interrupted during active
+execution is blocked from automatic retry; this demo does not claim crash
+recovery for arbitrary external side effects or production approval identity.
 
 ## Test
 
@@ -301,7 +296,7 @@ LANGGRAPH_STRICT_MSGPACK=true .venv/bin/python -m unittest discover -s tests -v
 
 The deterministic tests do not download the embedding model. They cover all six
 agent contracts, ontology violations, semantic ranking, a real in-process MCP
-tool call, Review interruption/resume, Guard rejection, citation enforcement,
+tool call, durable proof pickup and Review interruption/resume, Guard rejection, citation enforcement,
 and exclusion of hidden prompt/reasoning fields from public traces.
 
 ## Architecture Notes

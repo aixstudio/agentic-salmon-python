@@ -23,10 +23,14 @@
 | Preference feedback weakens safety rules | Learning records preference only; policy is code-controlled and unchanged. |
 | Personal metadata leaks through media | Keep raw media private; publish only reviewed crops with metadata removed. |
 | Chats or hidden reasoning enter public Git | Clean-room allowlist export; deny session, prompt, trace, and private paths. |
-| Credentials enter source or traces | Ignore `.env` and traces; keep the public demo credential-free. |
+| Credentials enter source or traces | Ignore `.env`, traces and `log/`; keep the public demo credential-free. |
+| Wrong-order or repeated release | Persist phase claims with the run checkpoint; require saved adjudication before Proof-3 and reject replays. |
+| Guessed human observations erase uncertainty | The proof flow accepts only APPROVE or STOP; no free-text observations are collected and all unknowns remain. |
 | Embedding-model acquisition changes the trust boundary | Pin the model identity, isolate the cache, and keep unit tests independent of network/model downloads. |
 | Model cooking advice conflicts with authoritative guidance | Do not export raw chat recommendations; cite USDA guidance and require a food thermometer. |
 
 ## Boundary
 
 This repository demonstrates architecture. It does not determine food freshness or safety and does not replace authoritative food-safety guidance or human judgment. USDA guidance says fish should reach 145°F (62.8°C), measured with a food thermometer.
+
+SQLite checkpoints are trusted local state, not signed approvals. Do not automatically retry an active operation interrupted by a crash. The demo does not claim production approval identity or exactly-once external side effects.

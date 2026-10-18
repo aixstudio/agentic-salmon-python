@@ -12,6 +12,7 @@ build/
 dist/
 *.egg-info/
 traces/
+log/
 .active-session.md
 .agents/
 .claude/

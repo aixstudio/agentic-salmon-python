@@ -95,9 +95,6 @@ def _reconcile_unknowns(
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     retained = list(reason.retained_unknowns)
     resolved: list[str] = []
-    if evidence.odor_observation and evidence.odor_observation.strip():
-        odor_unknown = "odor after opening"
-        if odor_unknown in retained:
-            retained.remove(odor_unknown)
-            resolved.append(odor_unknown)
+    # Free-text recollections are reported evidence, not verified resolutions.
+    # The deterministic proof supplies no new storage or odor observations.
     return tuple(retained), tuple(resolved)

@@ -173,7 +173,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual("test-mcp", mcp_call["server_name"])
         self.assertIn("air-fryer basket", self.knowledge.queries[0])
         review = result.events[3].evidence["review"]
-        self.assertNotIn("odor after opening", review["retained_unknowns"])
+        self.assertEqual(["verified food identity", "storage history", "allergens"], review["retained_unknowns"])
 
     def test_invalid_hypothesis_reinterrupts_and_resumes_same_run(self) -> None:
         invalid = self.workflow.run(
